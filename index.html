@@ -353,14 +353,15 @@
             const line2 = [...iconContent].slice(3).join('');
             
             // 2行表示用のフォントサイズと行間を設定
-            const fontSize = size * 0.4;
-            const lineHeight = size * 0.45; // 1行分の高さ (フォントサイズより少し大きく)
+            // 🌟 修正ポイント: フォントサイズを小さく (0.4 -> 0.35)
+            const fontSize = size * 0.35; 
+            const lineHeight = size * 0.4; // 1行分の高さ (フォントサイズより少し大きく)
             const verticalShift = size * 0.05; // 視覚的な中央揃えのための全体シフト
 
             // 1行目のY座標: 中央 - (行間 / 2) - (全体シフト)
-            const textY1 = size / 2 - (lineHeight / 2) - verticalShift; 
+            const textY1 = size / 2 - (lineHeight / 2); // 0.5 * size - 0.2 * size = 0.3 * size
             // 2行目のY座標: 中央 + (行間 / 2) - (全体シフト)
-            const textY2 = size / 2 + (lineHeight / 2) - verticalShift; 
+            const textY2 = size / 2 + (lineHeight / 2) - verticalShift; // 0.5 * size + 0.2 * size - 0.05 * size = 0.65 * size
 
             ctx.font = `bold ${fontSize}px Inter, sans-serif`;
             
