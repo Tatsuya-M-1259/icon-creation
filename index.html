@@ -31,7 +31,12 @@
         .btn-primary:active {
             transform: translateY(0);
         }
-        /* カラーパレットのボタンのスタイル */
+        /* 🌟 追加: 無効化時のスタイル */
+        .btn-primary:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
         .color-preset-button {
             width: 32px;
             height: 32px;
@@ -72,7 +77,7 @@
                     </div>
 
                 <label for="icon-input" class="block text-sm font-medium text-gray-700 mb-1">または直接入力 / Font Awesome (`<i class='...'></i>`)</label>
-                <input type="text" id="icon-input" value="✨" maxlength="50" 
+                <input type="text" id="icon-input" value="✨" maxlength="6" 
                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg" 
                        placeholder="例: A, 🚀, <i class='fas fa-code'></i>">
             </div>
@@ -176,7 +181,8 @@
     function updatePreview() {
         const bgColor = bgColorText.value;
         const textColor = textColorText.value;
-        const iconContent = iconInput.value;
+        let iconContent = iconInput.value;
+        let isFa = iconContent.includes('<i') || iconContent.includes('<span'); // FA/HTMLタグチェック
 
         // 背景色の更新
         iconPreviewContainer.style.backgroundColor = bgColor;
@@ -184,19 +190,50 @@
         // アイコンコンテンツの更新 (HTML対応)
         iconText.style.color = textColor;
         
-        // Font Awesomeクラスを含む場合はinnerHTML、そうでなければtextContent
-        if (iconContent.includes('<i') || iconContent.includes('<span')) {
+        if (isFa) {
+            // Font Awesomeの場合 (Canvasで描画できないためダウンロード不可)
             iconText.innerHTML = iconContent;
-            iconText.style.fontSize = '40px'; // Font Awesomeは小さめに
+            iconText.style.fontSize = '40px'; 
             iconText.style.fontWeight = 'normal';
+            showWarning('Font Awesomeはダウンロード画像に正確に反映できません。絵文字またはテキストをご利用ください。', 'red');
+            generateButton.disabled = true;
         } else {
-            iconText.innerHTML = '';
-            iconText.textContent = iconContent;
-            // 1文字の絵文字/文字なら大きく、それ以外は小さく
-            iconText.style.fontSize = iconContent.length === 1 ? '72px' : '48px'; 
-            iconText.style.fontWeight = '800';
+            // 🌟 6文字以下のテキスト/絵文字の場合の処理
+            iconText.innerHTML = ''; // 一度クリア
+            let contentLen = [...iconContent].length; // 絵文字対応の文字数
+            
+            if (contentLen > 3 && contentLen <= 6) {
+                // 4〜6文字の場合：2行構成 (3文字 + 改行 + 残り)
+                const line1 = [...iconContent].slice(0, 3).join('');
+                const line2 = [...iconContent].slice(3).join('');
+                iconText.innerHTML = `${line1}<br>${line2}`;
+                iconText.style.fontSize = '40px'; // 2行表示なので小さく
+                iconText.style.lineHeight = '1.1'; // 行間を狭く
+                iconText.style.fontWeight = '800';
+            } else {
+                // 1〜3文字の場合：1行構成
+                iconText.textContent = iconContent;
+                iconText.style.fontSize = contentLen === 1 ? '72px' : '48px'; 
+                iconText.style.lineHeight = '1'; 
+                iconText.style.fontWeight = '800';
+            }
+
+            hideMessage();
+            generateButton.disabled = false;
         }
     }
+
+    // --- メッセージ表示制御 ---
+    function showWarning(text, color) {
+        messageText.textContent = text;
+        messageBox.classList.remove('hidden', 'bg-green-100', 'border-green-400', 'text-green-700');
+        messageBox.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
+    }
+
+    function hideMessage() {
+        messageBox.classList.add('hidden');
+    }
+
 
     // --- カラーピッカーとテキストの同期 ---
     function syncColors(sourceId, targetId) {
@@ -205,13 +242,11 @@
         source.addEventListener('input', () => {
             target.value = source.value;
             updatePreview();
-            // 色が変わったら、パレットの選択状態を解除
             document.querySelectorAll('.color-preset-button').forEach(btn => btn.classList.remove('selected'));
         });
         target.addEventListener('input', () => {
             source.value = target.value;
             updatePreview();
-            // 色が変わったら、パレットの選択状態を解除
             document.querySelectorAll('.color-preset-button').forEach(btn => btn.classList.remove('selected'));
         });
     }
@@ -224,7 +259,6 @@
             btn.type = 'button';
             btn.className = 'text-2xl p-2 rounded-lg bg-white shadow hover:bg-gray-100 transition';
             
-            // HTMLタグを含む場合はinnerHTML、絵文字/文字の場合はtextContent
             if (mark.value.includes('<i')) {
                 btn.innerHTML = mark.value;
                 btn.title = mark.label;
@@ -249,25 +283,20 @@
             btn.title = palette.name;
             btn.style.backgroundColor = palette.bg;
             
-            // 内部のテキスト/アイコン (文字色を示すための小さなマーク)
             const innerMark = document.createElement('span');
             innerMark.className = 'text-lg';
-            innerMark.textContent = 'A'; // テキストのサンプル
+            innerMark.textContent = 'A';
             innerMark.style.color = palette.text;
             btn.appendChild(innerMark);
 
-            // 初期選択状態の設定
             if (index === 0) {
                 btn.classList.add('selected');
             }
 
             btn.addEventListener('click', () => {
-                // すべてのボタンの選択状態を解除
                 document.querySelectorAll('.color-preset-button').forEach(b => b.classList.remove('selected'));
-                // クリックされたボタンを選択状態に
                 btn.classList.add('selected');
                 
-                // 色をフォームとプレビューに適用
                 bgColorPicker.value = palette.bg;
                 bgColorText.value = palette.bg;
                 textColorPicker.value = palette.text;
@@ -291,8 +320,14 @@
     // 初期表示を更新
     window.onload = updatePreview;
 
-    // --- 画像生成とダウンロードロジック ---
+    // --- 画像生成とダウンロードロジック (絵文字/テキスト専用) ---
     function drawIconOnCanvas(size) {
+        // ダウンロード前に再度確認 (Font Awesomeが入力されていたら何もしない)
+        if (iconInput.value.includes('<i') || iconInput.value.includes('<span')) {
+            showWarning('Font Awesomeはダウンロードできません。絵文字かテキストに修正してください。', 'red');
+            return;
+        }
+
         iconCanvas.width = size;
         iconCanvas.height = size;
 
@@ -307,37 +342,36 @@
         // 2. テキスト/アイコンの準備
         ctx.fillStyle = textColor;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle'; // 垂直方向の基準を中央に設定
+        ctx.textBaseline = 'middle'; 
 
         const centerX = size / 2;
-        let centerY = size / 2;
+        let contentLen = [...iconContent].length; // 絵文字対応の文字数
         
-        // 描画するテキストとフォントサイズの決定
-        let textToDraw = iconContent;
-        let fontSize;
-        let isFa = iconContent.includes('<i') || iconContent.includes('<span');
-        
-        if (isFa) {
-            // Font Awesomeの場合: Canvasでは描画できないため、タグを削除したテキストを可能な限り描画する
-            textToDraw = iconContent.replace(/<[^>]*>/g, '').trim(); 
-            if(textToDraw === '') textToDraw = "FA"; // タグのみの場合はフォールバックとして「FA」を描画
-            fontSize = size * 0.35; // プレビューのFont Awesomeサイズに合わせる
-        } else if (iconContent.length === 1) {
-            // 単一文字/絵文字
-            fontSize = size * 0.55; 
-        } else {
-            // 複数文字
-            fontSize = size * 0.4;
-        }
+        // 🌟 2行表示のロジック
+        if (contentLen > 3 && contentLen <= 6) {
+            const line1 = [...iconContent].slice(0, 3).join('');
+            const line2 = [...iconContent].slice(3).join('');
+            
+            // 2行表示用のフォントサイズと行間を設定
+            const fontSize = size * 0.4;
+            const lineHeight = size * 0.45; // 1行分の高さ (フォントサイズより少し大きく)
+            const textY1 = size / 2 - (lineHeight / 2); // 1行目のY座標 (中央から上にずらす)
+            const textY2 = size / 2 + (lineHeight / 2) - (size * 0.05); // 2行目のY座標 (中央から下にずらす、微調整含む)
 
-        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+            ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+            
+            // 描画
+            ctx.fillText(line1, centerX, textY1);
+            ctx.fillText(line2, centerX, textY2);
         
-        // 垂直方向の微調整: 視覚的な中央揃えのため、下にずれるのを補正する (約5%上に移動)
-        let verticalOffset = size * 0.05; 
-        
-        // 3. テキストを描画
-        // Font Awesomeタグの場合は補正なし、テキスト/絵文字の場合に補正を適用
-        ctx.fillText(textToDraw, centerX, centerY + (isFa ? 0 : -verticalOffset));
+        } else {
+            // 1行表示のロジック (1〜3文字)
+            let fontSize = contentLen === 1 ? size * 0.55 : size * 0.4;
+            ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+            let verticalOffset = size * 0.05; 
+            
+            ctx.fillText(iconContent, centerX, size / 2 - verticalOffset);
+        }
         
         // 4. ダウンロード
         const dataURL = iconCanvas.toDataURL('image/png');
@@ -350,6 +384,11 @@
     }
     
     function downloadManifest(shortName, startUrl, displayMode, themeColor) {
+        // ダウンロード前に再度確認
+        if (iconInput.value.includes('<i') || iconInput.value.includes('<span')) {
+            return;
+        }
+        
         const manifest = {
             "name": "あなたのPWAアプリ名 (変更してください)",
             "short_name": shortName,
@@ -387,24 +426,23 @@
     }
 
     generateButton.addEventListener('click', () => {
-        // ダウンロード開始メッセージを表示
+        if (generateButton.disabled) {
+             showWarning('ダウンロードには、Font Awesomeではなく絵文字かテキストをご利用ください。', 'red');
+             return;
+        }
+
         messageText.textContent = "アイコン画像を生成し、ダウンロードを開始します...";
-        messageBox.classList.remove('hidden');
-        messageBox.classList.remove('bg-red-100', 'border-red-400', 'text-red-700');
+        messageBox.classList.remove('hidden', 'bg-red-100', 'border-red-400', 'text-red-700');
         messageBox.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
         
-        // 1. 各サイズを生成してダウンロード
         drawIconOnCanvas(192);
         drawIconOnCanvas(512);
         
-        // 2. manifest.jsonをダウンロード (サンプルの内容で)
-        // Font Awesomeタグを考慮し、短い名前の決定ロジックを改善
         let shortName = iconInput.value.replace(/<[^>]*>/g, '');
         if (shortName.length > 8) shortName = "MyApp"; 
         if (shortName.trim() === '') shortName = "IconApp";
 
         const themeColor = bgColorText.value;
-        // start_urlを相対パス "./index.html" に設定
         downloadManifest(shortName, "./index.html", "standalone", themeColor);
 
         messageText.innerHTML = `✅ **icon-192x192.png**、**icon-512x512.png**、**manifest.json** のダウンロードを開始しました。これらのファイルをWebアプリのルートディレクトリに配置してください。`;
