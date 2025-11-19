@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWAアイコンジェネレーター</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -319,6 +322,26 @@
     
     // 初期表示を更新
     window.onload = updatePreview;
+    
+    // =========================================================================
+    // PWA: Service Workerの登録コード (ここから追記)
+    // =========================================================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            // sw.jsを登録
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered: ', registration);
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed: ', error);
+                });
+        });
+    }
+    // =========================================================================
+    // PWA: Service Workerの登録コード (ここまで追記)
+    // =========================================================================
+
 
     // --- 画像生成とダウンロードロジック (絵文字/テキスト専用) ---
     function drawIconOnCanvas(size) {
